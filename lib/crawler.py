@@ -3,46 +3,74 @@
 
 import urllib2
 import re
-
+import threading
+import time
+import urlparse
 
 from bs4 import BeautifulSoup
 import requests
 from headers import header
 import redis_tool
 from handler import Resp_Handler
+import tools
 
-class crawler():
+class crawler(threading.Thread):
 
     def __init__(self,redis_config,start_url):
+        threading.Thread.__init__(self)
         self._header=header()
         self._s=requests.Session()
-        self._s.headers.update(self._header.get_default_header())
+        #self._s.headers.update(self._header.get_default_header())
         self._handler=Resp_Handler(start_url)
+        self._r=redis_tool.redis_tool(redis_config)
+        self._redis_enable=self._r.get_init_status()
+        self._start=start_url
+        self._log=tools.My_Log(logfile='crawler')
 
-    def get_response(self,url,method='get',headers={},files=[],data=None,cookies=None,cert=None,timeout=3,**kwargs):
+    def _get_response(self,url,method='get',headers={},files=[],data=None,cookies=None,cert=None,timeout=30,**kwargs):
         method=method.upper()
-        self._s.headers.update(headers)
+        #self._s.headers.update(headers)
         pre=requests.Request(method=method,url=url,data=data,files=files)
         prepped=self._s.prepare_request(pre)
         with self._s.send(prepped,stream=True,cert=cert,timeout=timeout) as resp:
-            self._header.parse_header(resp.headers)
+            self._header.parse_header(dict(resp.headers))
             self._s.headers.update(self._header.get_default_header())
             content_type=resp.headers.get('content-type')
             encoding=self._get_content_encoding(content_type)
             regx=re.compile('.*(text\/html|text\/xml).*')
-            if regx.search(content_type) and resp.status_code==requests.codes.OK:
+            if resp.status_code==requests.codes.OK:
                 #Don't handle redirect url for now
-                self._handler.handle(resp)
+                '''
+                with open('temp.txt','wb') as f:
+                    f.write(resp.content)
+                '''
+                self._handler.handle_data(resp)
             elif resp.status_code!=requests.codes.OK:
                 print("Connected url %s \t %d" % (url,resp.status_code))
             else:
                 #If the response is not html or xml ,save the url to redis 
                 pass
 
-    def _get_url(self):
+    def _get_url(self,url):
         '''
-        Get url from redis
+        Get url from redis by the given url
         '''
+        parsed_url='parsed_'+url
+
+        if self._redis_enable:
+            get_url=urlparse.urljoin(self._start,self._r.get_redis().lpop(url))
+            while self._r.get_redis().sismember(parsed_url,urlparse.urljoin(self._start,get_url)):
+                get_url=self._r.get_redis().lpop(url)
+            #self._r.get_redis().sadd(url,get_url)
+            if get_url:
+                return urlparse.urljoin(self._start,get_url)
+            else:
+                #import sys
+                #sys.exit(-1)
+                return None
+        else:
+            return None
+
 
 
 
@@ -52,6 +80,23 @@ class crawler():
         '''
         regx=re.compile('(?<=charset\=).*')
         return regx.findall(content_type)
+
+    def run(self):
+        print 'Starting crawling'
+        self._log.debug('Starting crawling %s ' % self._start)
+        url=self._start
+        while True:
+            print('Crawling %s ' % url)
+            if url:
+                print('parsing %s ' % url)
+                self._get_response(url=url)
+                print('parsed %s ' % url)
+            url=self._get_url(self._start)
+            self._log.debug('get url %s from redis' % url)
+            print('get new url from redis:%s' % url)
+            time.sleep(3)
+
+
 
 
 

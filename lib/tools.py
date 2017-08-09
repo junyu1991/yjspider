@@ -16,11 +16,11 @@ class My_Log():
 
     import logging,logging.handlers
 
-    def __init__(self,logname,logfile,*args):
+    def __init__(self,logfile='My_log',*args):
         pre=os.path.join(os.path.dirname(os.path.abspath(__file__)),'../log/')
         logfilename=os.path.join(pre,logfile)
 
-        self.__logger=logging.getLogger(logname)
+        self.__logger=logging.getLogger()
 
         filehandler=logging.handlers.TimedRotatingFileHandler(logfilename,when='midnight',encoding='utf8')
         filehandler.suffix='%Y-%m-%d.log'
