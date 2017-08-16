@@ -70,7 +70,7 @@ class Resp_Handler():
                 return
             #self._get_soup(resp.content)
             if content_type and re.search('(html|xml)',content_type):
-                self._get_soup()
+                self._get_soup(resp.content)
                 self.handle_html()
             elif content_type and re.search('(javascript|css)',content_type):
                 self.handle_static_files(url=resp.url)
@@ -88,6 +88,7 @@ class Resp_Handler():
         pass
 
     def handle_data(self,response):
+        print("Parsing %s " % response.url)
         self._handle_header(response)
         response.close()
         url=response.url
@@ -150,6 +151,5 @@ class Resp_Handler():
         Handle reponse content html,xml
         '''
         self.handle_link()
-        self.handle_img(url=None)
         self.handle_img(url=None)
         self.handle_static_files(url=None)
