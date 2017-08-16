@@ -9,6 +9,7 @@ import threading
 
 import tools
 import redis_tool
+import requests
 
 class Download():
     '''
@@ -18,7 +19,7 @@ class Download():
     '''
 
     def __init__(self,redis_config,download_url):
-        self._log=tools.My_Log(logfile='downloader')
+        self._log=tools.My_Log(logname=download_url,logfile='downloader')
         self._init_redis(redis_config)
         self._redis_key='download_'+download_url
         self._root_url=download_url
@@ -32,6 +33,7 @@ class Download():
     def run(self):
         downloaded='downloaded_'+self._redis_key
         print downloaded
+        count=0
         if self._redis_enable:
             while True:
                 url_d=self._r.lpop(self._redis_key)
@@ -39,11 +41,15 @@ class Download():
                 if not self._r.sismember(downloaded,url_d):
                     self._log.debug('downloading %s ' % url_d)
                     self.download(url=url_d)
-                    self._log.debug('downloaded %s' % url_d)
-                    self._r.sadd(downloaded,url_d)
+                    #self._log.debug('downloaded %s' % url_d)
+                    #self._r.sadd(downloaded,url_d)
                     time.sleep(3)
                 else:
-                    print '============================================ %s' % url_d
+                    print('downloaded url %s'%url_d)
+                    count+=1
+                if count==20:
+                    time.sleep(30)
+                    count=0
 
     def add_task(self,url):
         '''
@@ -62,29 +68,24 @@ class Download():
         if not url:
             return
         print('downloading:%s' % url)
-        temp=urllib2.urlopen(url)
+        r=requests.get(url,stream=True,timeout=5)
         filename=os.path.join(filepath,'.'+urlparse.urlsplit(url).path)
-        headers=temp.headers
-        content_length=0
-        if headers.has_key('content-length'):
-            content_length=float(headers.get('content-length'))
-            print("The %s is %s M" % (filename,str(int(content_length)/(1024*1024))))
+        chunk_size=1024*1024
         print filename
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
-        with open(filename,'wb')  as f:
-            data=temp.read(1024*1024)
-            download_length=float(len(data))
-            while ''!=data:
-                begin=time.time()
-                f.write(data)
-                data=temp.read(1024*1024)
-                end=time.time()
-                download_length+=len(data)
-                if end>begin and content_length!=0:
-                    print("The download speed= %6.3f kb/s,%5.2f%% downloaded" % (1024/(end-begin),download_length/content_length*100))
-                else:
-                    print("download finish")
+        try:
+            with open(filename,'wb')  as f:
+                for data in r.iter_content(chunk_size=chunk_size):
+                    #data=temp.read(1024*1024)
+                    f.write(data)
+            self._r.sadd('downloaded_'+self._redis_key,url)
+        except requests.ConnectTimeout,e:
+            print("Download %s timeout,this will redownload later.\n%s" % (url,str(e)))
+            if self._redis_enable:
+                self._r.lpush(self._redis_key,url)
+        except Exception,e1:
+            print('Download %s exception.\n%s' % (url,str(e1)))
 '''
 if __name__=='__main__':
     d=Download()
