@@ -120,7 +120,7 @@ class Resp_Handler():
         self._log.debug("putting url into redis %s " % self.name)
         for a_l in a_link:
             pass
-            self._r.lpush(self.name,a_l)
+            self._r.lpush(self.name,urlparse.urldefrag(a_l)[0])
 
     def handle_img(self,url):
         '''

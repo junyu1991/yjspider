@@ -71,6 +71,7 @@ class crawler(threading.Thread):
             print('Connect %s error.\n%s' % (url,str(e2)))
         except Exception,e3:
             print('Connect %s error.\n%s' % (url,str(e3)))
+            self._r.get_redis().sadd('parsed_'+self._start,url)
 
     def _get_url(self,url):
         '''

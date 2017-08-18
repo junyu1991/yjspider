@@ -48,7 +48,8 @@ class Download():
                     print('downloaded url %s'%url_d)
                     count+=1
                 if count==20:
-                    time.sleep(30)
+                    print('sleeping..............')
+                    time.sleep(3)
                     count=0
 
     def add_task(self,url):
