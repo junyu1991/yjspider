@@ -19,10 +19,17 @@ class Download():
     '''
 
     def __init__(self,redis_config,download_url):
+
+        #init the log ,redis
         self._log=tools.My_Log(logname=download_url,logfile='downloader')
         self._init_redis(redis_config)
-        self._redis_key='download_'+download_url
-        self._root_url=download_url
+        self._redis_init_key=download_url
+
+        #The threading status,stop and pause 
+        self._stop=False
+        self._pause=False
+
+
         print("Download pid %d " % os.getpid())
 
     def _init_redis(self,redis_config):
@@ -30,36 +37,84 @@ class Download():
         self._redis_enable=self._redis.get_init_status()
         self._r=self._redis.get_redis()
 
+    def _init_redis_variable(self):
+        '''
+        Get the download url list name and downloaded url set
+        '''
+        if self._redis_enable:
+            #the download list name
+            self._download_list=self._r.hget(self._redis_init_key,'download_url')
+
+            #the downloaded set name
+            self._downloaded_set=self._r.hget(self._redis_init_key,'downloaded_url')
+
+            #the file path to save the download file
+            self._file_path=self._r.hget(self._redis_init_key,'download_filepath')
+        else:
+            pass
+
+    def _get_download_task(self):
+        '''
+        Get the download url list
+        @return:return the url wait to be downloaded
+        '''
+        if self._redis_enable:
+            #temp=self._r.lrange(self._download_list,start,end)
+            #return [t for t in temp if not self._r.sismember(self._downloaded_set,t)]
+            while True:
+                if self._r.llen(self._download_list):
+                    url=self._r.lpop(self._download_list)
+                    if not self._r.sismember(self._downloaded_set):
+                        return url
+                else:
+                    time.sleep(10)
+        else:
+            return None
+
+    def _add_downloaded(self,downloaded_url):
+        '''
+        Add the downloaded url to the redis
+        @param downloaded_url:the url to add to the redis
+        '''
+        if self._redis_enable:
+            self._r.sadd(self._downloaded_set,downloaded_url)
+        else:
+            pass
+
+    def stop(self):
+        '''
+        Stop the threading
+        '''
+        self._stop=True
+
+    def paused(self):
+        '''
+        Pause the threading
+        '''
+        self._pause=True
+
+    def resume(self):
+        '''
+        Resume the threading
+        '''
+        self._pause=False
+
+    def get_pause_status(self):
+        return self._pause
+
     def run(self):
-        downloaded='downloaded_'+self._redis_key
-        print downloaded
-        count=0
         if self._redis_enable:
             while True:
-                url_d=self._r.lpop(self._redis_key)
-                url_d=urlparse.urljoin(self._root_url,url_d)
-                if not self._r.sismember(downloaded,url_d):
-                    self._log.debug('downloading %s ' % url_d)
-                    self.download(url=url_d)
-                    #self._log.debug('downloaded %s' % url_d)
-                    #self._r.sadd(downloaded,url_d)
-                    time.sleep(3)
+                if self._stop:
+                    print("Existing the download threading")
+                    break
+                if not self._pause:
+                    url=self._get_download_task()
+                    self._download(url=url)
                 else:
-                    print('downloaded url %s'%url_d)
-                    count+=1
-                if count==20:
-                    print('sleeping..............')
-                    time.sleep(3)
-                    count=0
+                    continue
 
-    def add_task(self,url):
-        '''
-        Add download task to the downloader
-        @param:url,the downloda url
-        '''
-        self.__task.append(url)
-
-    def download(self,url='http://zt.bdinfo.net/speedtest/wo3G.rar',filepath='./tempdown'):
+    def download(self,url='http://zt.bdinfo.net/speedtest/wo3G.rar',filepath=self._file_path):
         '''
         Download file from website to local file
         @param:url,download url
@@ -80,13 +135,18 @@ class Download():
                 for data in r.iter_content(chunk_size=chunk_size):
                     #data=temp.read(1024*1024)
                     f.write(data)
-            self._r.sadd('downloaded_'+self._redis_key,url)
+            self._add_downloaded(url)
         except requests.ConnectTimeout,e:
             print("Download %s timeout,this will redownload later.\n%s" % (url,str(e)))
             if self._redis_enable:
-                self._r.lpush(self._redis_key,url)
+                self._r.lpush(self._download_list,url)
         except Exception,e1:
             print('Download %s exception.\n%s' % (url,str(e1)))
+
+
+
+
+
 '''
 if __name__=='__main__':
     d=Download()
