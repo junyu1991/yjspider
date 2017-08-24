@@ -14,14 +14,16 @@ class Resp_Handler():
     The reponse handler,handle the response
     '''
 
-    def __init__(self,handler_name="",redis_config='redis-config.json'):
+    def __init__(self,handler_name="",redis=None):
         '''
         @param handler_name:the reponse hanle name,used as the key of the redis
         @param redis_config:the redis config file
         '''
         self.name=handler_name
         self._init_log(log_name=self.name,log_file='resp-handler')
-        self._init_redis(redis_config)
+        self._redis_enable=True
+        self._r=redis
+        #self._init_redis(redis_config)
 
 
     def _init_redis(self,redis_config):
@@ -100,8 +102,9 @@ class Resp_Handler():
         '''
 
         #Update parsed url database
-        parsed='parsed_'+self.name
+        #parsed='parsed_'+self.name
         if self._redis_enable:
+            parsed=self._r.hget(self.name,codes.parsed_set)
             self._r.sadd(parsed,url)
         return None
 
@@ -119,8 +122,8 @@ class Resp_Handler():
             return
         self._log.debug("putting url into redis %s " % self.name)
         for a_l in a_link:
-            pass
-            self._r.lpush(self.name,urlparse.urldefrag(a_l)[0])
+            #pass
+            self._r.lpush(self._r.hget(self.name,codes.url),urlparse.urldefrag(a_l)[0])
 
     def handle_img(self,url):
         '''
@@ -129,7 +132,7 @@ class Resp_Handler():
         '''
         if not self._redis_enable:
             return
-        download_url='download_'+self.name
+        download_url=self._r.hget(self.name,codes.download_url)
         if url:
             self._r.lpush(download_url,url)
             return

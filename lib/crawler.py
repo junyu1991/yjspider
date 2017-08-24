@@ -13,6 +13,7 @@ from headers import header
 import redis_tool
 from handler import Resp_Handler
 import tools
+import codes
 
 class crawler(threading.Thread):
     '''
@@ -21,23 +22,28 @@ class crawler(threading.Thread):
     @param start_url:the root url of a spider
     '''
 
-    def __init__(self,redis_config,start_url):
+    def __init__(self,redis,start_url,resp_handler=None):
         threading.Thread.__init__(self)
 
         #Init the requests session
         self._header=header()
         self._s=requests.Session()
         #self._s.headers.update(self._header.get_default_header())
-        self._handler=Resp_Handler(start_url,redis_config)
+        #self._handler=Resp_Handler(start_url,redis_config)
+        self._handler=resp_handler
 
         #Init the redis
-        self._r=redis_tool.redis_tool(redis_config)
-        self._redis_enable=self._r.get_init_status()
+        #temp_redis=redis_tool.redis_tool(redis_config)
+        self._redis_enable=True
+        self._r=redis
 
         self._start=start_url
 
         #Init the log tool
         self._log=tools.My_Log(logname=self._start,logfile='crawler')
+
+    def set_resp_handler(self,resp_handler):
+        self._handler=resp_handler
 
     def _get_response(self,url,method='get',headers={},files=[],data=None,cookies=None,cert=None,timeout=30,**kwargs):
         method=method.upper()
@@ -66,23 +72,24 @@ class crawler(threading.Thread):
         except requests.ConnectTimeout,e:
             print('Connect %s timeout .\n%s' % (url,str(e)))
             if self._redis_enable:
-                self._r.get_redis().lpush(self._start,url)
+                self._r.lpush(self._start,url)
         except requests.ConnectionError,e2:
             print('Connect %s error.\n%s' % (url,str(e2)))
         except Exception,e3:
             print('Connect %s error.\n%s' % (url,str(e3)))
-            self._r.get_redis().sadd('parsed_'+self._start,url)
+            self._r.sadd('parsed_'+self._start,url)
 
     def _get_url(self,url):
         '''
         Get url from redis by the given url
         '''
-        parsed_url='parsed_'+url
 
         if self._redis_enable:
-            get_url=urlparse.urljoin(self._start,self._r.get_redis().lpop(url))
-            while self._r.get_redis().sismember(parsed_url,urlparse.urljoin(self._start,get_url)):
-                get_url=self._r.get_redis().lpop(url)
+            parsed_url=self._r.hget(url,codes.parsed_set)
+            url=self._r.hget(url,codes.url)
+            get_url=urlparse.urljoin(self._start,self._r.lpop(url))
+            while self._r.sismember(parsed_url,urlparse.urljoin(self._start,get_url)):
+                get_url=self._r.lpop(url)
             #self._r.get_redis().sadd(url,get_url)
             if get_url:
                 return urlparse.urljoin(self._start,get_url)
@@ -95,13 +102,13 @@ class crawler(threading.Thread):
 
 
 
-
+    '''
     def _get_content_encoding(self,content_type):
-        '''
-        Get content encoding from content-type
-        '''
+       # Get content encoding from content-type
         regx=re.compile('(?<=charset\=).*')
         return regx.findall(content_type)
+    '''
+
 
     def run(self):
         print 'Starting crawling'
