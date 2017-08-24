@@ -4,13 +4,16 @@
 import redis
 
 from lib import redis_tool
+from lib import crawler
+from lib import handler
+from lib import codes
 
 #the manage key to manage the spider
 manage_key='yjspider'
 
 class yjspider():
 
-    def __init__(self,redis_config,url=''):
+    def __init__(self,redis_config,url='',crawler=None,resp_handler=None):
         '''
         Init the redis,crawler,downloader
         @param redis_config:the redis config file
@@ -19,6 +22,9 @@ class yjspider():
         self._init_redis(redis_config)
         self._init_log()
         self._url=url
+
+        self._crawler=crawler
+        self._resp_handler=resp_handler
 
     def _init_redis(self,redis_config):
         '''
@@ -32,6 +38,18 @@ class yjspider():
     def _init_log(self):
         pass
 
+    def set_crawler(self,crawler):
+        '''
+        Set the spider's crawler
+        '''
+        self._crawler=crawler
+
+    def set_resp_handler(self,resp_handler):
+        '''
+        Set the crawler's response handler
+        '''
+        self._resp_handler=resp_handler
+
 
     def start(self,url=self._url):
         '''
@@ -41,7 +59,12 @@ class yjspider():
         #handle the redis
         self._handle_redis(url)
 
+        if not self._resp_handler:
+            self._resp_handler=handler.Resp_Handler()
+
         #start crawler
+        if not self._crawler:
+            self._crawler=crawler.crawler(redis=self._r)
 
 
 
@@ -65,7 +88,7 @@ class yjspider():
             download_name=get_md5('download_'+url)
             downloaded_set=get_md5('downloaded_'+url)
             download_path='./tempdown'
-            hash_dict={'url':url_name,'parsed_url':parsed_set,'download_url':download_name,'downloaded_url':downloaded_set,'download_path':download_path}
+            hash_dict={codes.url:url_name,codes.parsed_set:parsed_set,codes.download_url:download_name,codes.downloaded_set:downloaded_set,codes.download_filepath:download_path}
             self._r.hmset(url,hash_dict)
         else:
             print('The redis not enable')
