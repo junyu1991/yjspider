@@ -24,6 +24,7 @@ class Download():
         self._log=tools.My_Log(logname=download_url,logfile='downloader')
         self._init_redis(redis_config)
         self._redis_init_key=download_url
+        self._init_redis_variable()
 
         #The threading status,stop and pause 
         self._stop=False
@@ -49,7 +50,8 @@ class Download():
             self._downloaded_set=self._r.hget(self._redis_init_key,'downloaded_url')
 
             #the file path to save the download file
-            self._file_path=self._r.hget(self._redis_init_key,'download_filepath')
+            #self._file_path=self._r.hget(self._redis_init_key,'download_filepath')
+            self._file_path='/work/test/tempdown'
         else:
             pass
 
@@ -63,8 +65,8 @@ class Download():
             #return [t for t in temp if not self._r.sismember(self._downloaded_set,t)]
             while True:
                 if self._r.llen(self._download_list):
-                    url=self._r.lpop(self._download_list)
-                    if not self._r.sismember(self._downloaded_set):
+                    url=urlparse.urljoin(self._redis_init_key,self._r.lpop(self._download_list))
+                    if not self._r.sismember(self._downloaded_set,url):
                         return url
                 else:
                     time.sleep(10)
@@ -110,11 +112,11 @@ class Download():
                     break
                 if not self._pause:
                     url=self._get_download_task()
-                    self._download(url=url)
+                    self._download(url=url,filepath=self._file_path)
                 else:
                     continue
 
-    def download(self,url='http://zt.bdinfo.net/speedtest/wo3G.rar',filepath=self._file_path):
+    def _download(self,url='http://zt.bdinfo.net/speedtest/wo3G.rar',filepath="/work/test/tempdown"):
         '''
         Download file from website to local file
         @param:url,download url
@@ -124,13 +126,14 @@ class Download():
         if not url:
             return
         print('downloading:%s' % url)
-        r=requests.get(url,stream=True,timeout=5)
+        #r=requests.get(url,stream=True,timeout=5)
         filename=os.path.join(filepath,'.'+urlparse.urlsplit(url).path)
         chunk_size=1024*1024
         print filename
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
         try:
+            r=requests.get(url,stream=True,timeout=5)
             with open(filename,'wb')  as f:
                 for data in r.iter_content(chunk_size=chunk_size):
                     #data=temp.read(1024*1024)

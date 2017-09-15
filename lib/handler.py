@@ -21,7 +21,7 @@ class Resp_Handler():
         '''
         self.name=handler_name
         self._init_log(log_name=self.name,log_file='resp-handler')
-        self._redis_enable=True
+        self._redis_enable=True if redis else False
         self._r=redis
         #self._init_redis(redis_config)
 

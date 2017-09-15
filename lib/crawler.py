@@ -55,7 +55,7 @@ class crawler(threading.Thread):
                 self._header.parse_header(dict(resp.headers))
                 self._s.headers.update(self._header.get_default_header())
                 content_type=resp.headers.get('content-type')
-                encoding=self._get_content_encoding(content_type)
+                #encoding=self._get_content_encoding(content_type)
                 regx=re.compile('.*(text\/html|text\/xml).*')
                 if resp.status_code==requests.codes.OK:
                     #Don't handle redirect url for now
@@ -77,7 +77,7 @@ class crawler(threading.Thread):
             print('Connect %s error.\n%s' % (url,str(e2)))
         except Exception,e3:
             print('Connect %s error.\n%s' % (url,str(e3)))
-            self._r.sadd('parsed_'+self._start,url)
+            #self._r.sadd('parsed_'+self._start,url)
 
     def _get_url(self,url):
         '''
@@ -85,6 +85,7 @@ class crawler(threading.Thread):
         '''
 
         if self._redis_enable:
+            print("Get url from redis")
             parsed_url=self._r.hget(url,codes.parsed_set)
             url=self._r.hget(url,codes.url)
             get_url=urlparse.urljoin(self._start,self._r.lpop(url))
