@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 #!encoding:utf-8
 
+import md5
+
 import redis
 
 from lib import redis_tool
@@ -26,6 +28,9 @@ class yjspider():
         self._crawler=crawler
         self._resp_handler=resp_handler
 
+        #the crawler threading pool size
+        self._thread_pool_size=1
+
     def _init_redis(self,redis_config):
         '''
         Init the redis connection
@@ -33,10 +38,19 @@ class yjspider():
         '''
         temp_redis=redis_tool.redis_tool(redis_config)
         self._redis_enable=temp_redis.get_init_status()
-        self._redis=temp_redis.get_redis()
+        self._r=temp_redis.get_redis()
 
     def _init_log(self):
         pass
+
+    def set_threading_pool_size(self,pool_size):
+        '''
+        Set crawler threding pool size
+        '''
+        self._thread_pool_size=pool_size
+
+    def get_threading_pool_size(self):
+        return self._thread_pool_size
 
     def set_crawler(self,crawler):
         '''
@@ -51,7 +65,7 @@ class yjspider():
         self._resp_handler=resp_handler
 
 
-    def start(self,url=self._url):
+    def start(self,url=''):
         '''
         Start the spider
         '''
@@ -60,11 +74,13 @@ class yjspider():
         self._handle_redis(url)
 
         if not self._resp_handler:
-            self._resp_handler=handler.Resp_Handler()
+            self._resp_handler=handler.Resp_Handler(handler_name=url,redis=self._r)
 
         #start crawler
         if not self._crawler:
-            self._crawler=crawler.crawler(redis=self._r)
+            self._crawler=crawler.crawler(redis=self._r,start_url=url)
+            self._crawler.set_resp_handler(self._resp_handler)
+            self._crawler.run()
 
 
 
@@ -78,6 +94,7 @@ class yjspider():
         download_path,the file location to save the file.
         The hash key is url
         '''
+        print("Set manage key and hash to the redis")
         if self._redis_enable:
             #put the url to the all set
             self._r.sadd(manage_key,url)
@@ -98,8 +115,7 @@ def get_md5(string):
     '''
     Get the string md5
     '''
-    import md5
-    m=md5()
+    m=md5.md5()
     m.update(string)
     return m.hexdigest()
 
