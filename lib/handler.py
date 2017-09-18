@@ -25,6 +25,13 @@ class Resp_Handler():
         self._r=redis
         #self._init_redis(redis_config)
 
+    def set_redis(self,redis=None):
+        if redis:
+            self._r=redis
+            self._redis_enable=True
+        else:
+            self._redis_enable=False
+
 
     def _init_redis(self,redis_config):
         '''
