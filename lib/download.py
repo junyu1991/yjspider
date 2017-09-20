@@ -139,8 +139,8 @@ class Download():
                     #data=temp.read(1024*1024)
                     f.write(data)
             self._add_downloaded(url)
-        except requests.ConnectTimeout,e:
-            print("Download %s timeout,this will redownload later.\n%s" % (url,str(e)))
+        except requests.ConnectTimeout,requests.ReadTimeout:
+            print("Download %s timeout,this will redownload later.\n" % (url))
             if self._redis_enable:
                 self._r.lpush(self._download_list,url)
         except Exception,e1:

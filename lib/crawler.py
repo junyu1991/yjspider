@@ -69,8 +69,8 @@ class crawler(threading.Thread):
                 else:
                     #If the response is not html or xml ,save the url to redis 
                     pass
-        except requests.ConnectTimeout,e:
-            print('Connect %s timeout .\n%s' % (url,str(e)))
+        except requests.ConnectTimeout,requests.ReadTimeout:
+            print('Connect %s timeout .\n' % (url))
             if self._redis_enable:
                 self._r.lpush(self._start,url)
         except requests.ConnectionError,e2:

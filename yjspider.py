@@ -63,6 +63,7 @@ class yjspider():
         Set the crawler's response handler
         '''
         resp_handler.set_redis(self._r)
+        #resp_handler.name=self._url
         self._resp_handler=resp_handler
 
 
@@ -76,6 +77,8 @@ class yjspider():
 
         if not self._resp_handler:
             self._resp_handler=handler.Resp_Handler(handler_name=url,redis=self._r)
+
+        self._resp_handler.name=url
 
         #start crawler
         if not self._crawler:
