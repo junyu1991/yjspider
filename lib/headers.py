@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 #!encoding:utf-8
 
+import re
+
+regx=re.compile('((e|E)xpires|(p|P)ath|(d|D)omain|(m|M)ax-age)')
+
 class header():
 
     def __init__(self,*args):
@@ -80,4 +84,20 @@ class header():
             self._header['Cookie']=response_header.get('Set-Cookie')
         if response_header.has_key('Connection'):
             self._header['Connection']=response_header.get('Connection')
+
+def get_cookie(set_cookie=''):
+    cookie=''
+    for sc in set_cookie.split():
+        temp=sc.split('=')
+        if len(temp)>1 and not regx.search(temp[0]):
+            cookie+=sc
+    return cookie
+
+
+if __name__=='__main__':
+    set_cookie='fixed_bar=1; expires=Mon, 25-Sep-2017 23:59:59 GMT; path=/, TIEBAUID=cb23caae14130a0d384a57f1; expires=Thu, 31-Dec-2020 15:59:59 GMT; path=/; domain=tieba.baidu.com'
+    set_cookie='BAIDUID=009676F5281D7B98715CD0E38FB1F5DC:FG=1; expires=Thu, 31-Dec-37 23:55:55 GMT; max-age=2147483647; path=/; domain=.baidu.com, BIDUPSID=009676F5281D7B98715CD0E38FB1F5DC; expires=Thu, 31-Dec-37 23:55:55 GMT; max-age=2147483647; path=/;domain=.baidu.com, PSTM=1506321109; expires=Thu, 31-Dec-37 23:55:55 GMT; max-age=2147483647; path=/; domain=.baidu.com, BDSVRTM=0; path=/, BD_HOME=0; path=/, H_PS_PSSID=1430_21123_18559_22073; path=/; domain=.baidu.com'
+    print get_cookie(set_cookie)
+
+
 

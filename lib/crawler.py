@@ -34,7 +34,7 @@ class crawler(threading.Thread):
 
         #Init the redis
         #temp_redis=redis_tool.redis_tool(redis_config)
-        self._redis_enable=True
+        self._redis_enable=True if redis else False
         self._r=redis
 
         self._start=start_url
@@ -52,11 +52,11 @@ class crawler(threading.Thread):
         prepped=self._s.prepare_request(pre)
         try:
             with self._s.send(prepped,stream=True,cert=cert,timeout=timeout) as resp:
-                self._header.parse_header(dict(resp.headers))
-                self._s.headers.update(self._header.get_default_header())
-                content_type=resp.headers.get('content-type')
+                #self._header.parse_header(dict(resp.headers))
+                #self._s.headers.update(self._header.get_default_header())
+                #content_type=resp.headers.get('content-type')
                 #encoding=self._get_content_encoding(content_type)
-                regx=re.compile('.*(text\/html|text\/xml).*')
+                #regx=re.compile('.*(text\/html|text\/xml).*')
                 if resp.status_code==requests.codes.OK:
                     #Don't handle redirect url for now
                     '''
