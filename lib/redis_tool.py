@@ -6,19 +6,29 @@ import os
 import json
 import sys
 
+try:
+    import redis
+    redis_enable=True
+except ImportError:
+    redis_enable=False
+
 class redis_tool():
 
     def __init__(self,config_file):
-        config_data=get_config(config_file)
-        if config_data:
-            host=config_data.get('host')
-            port=config_data.get('port')
-            password=config_data.get('password')
-            db=config_data.get('db')
-            self.init_redis(host,port,password,db)
-        else:
-            print("Redis init failed.Existing")
+        if (not redis_enable) or (not config_file):
+            self._r=None
             self._is_init=False
+        else:
+            config_data=get_config(config_file)
+            if config_data:
+                host=config_data.get('host')
+                port=config_data.get('port')
+                password=config_data.get('password')
+                db=config_data.get('db')
+                self.init_redis(host,port,password,db)
+            else:
+                print("Redis init failed.Existing")
+                self._is_init=False
 
 
     def init_redis(self,host,port,password,db):

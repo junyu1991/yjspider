@@ -3,7 +3,7 @@
 
 import md5
 
-import redis
+#import redis
 
 from lib import redis_tool
 from lib import crawler
@@ -15,7 +15,7 @@ manage_key='yjspider'
 
 class yjspider():
 
-    def __init__(self,redis_config,url='',crawler=None,resp_handler=None):
+    def __init__(self,redis_config=None,url='',crawler=None,resp_handler=None):
         '''
         Init the redis,crawler,downloader
         @param redis_config:the redis config file

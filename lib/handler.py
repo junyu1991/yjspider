@@ -7,6 +7,8 @@ import tools
 import urlparse
 import re
 
+
+from task import task
 import codes
 
 class Resp_Handler():
@@ -113,6 +115,9 @@ class Resp_Handler():
         if self._redis_enable:
             parsed=self._r.hget(self.name,codes.parsed_set)
             self._r.sadd(parsed,url)
+        else:
+            task.parsed_url[url]=True
+
         return None
 
     def handle_other(self,url):
@@ -126,6 +131,7 @@ class Resp_Handler():
     def handle_link(self):
         a_link=[a.get('href') for a in self._soup.find_all('a') if a.get('href')]
         if not self._redis_enable:
+            task.url_task.extend(a_link)
             return
         self._log.debug("putting url into redis %s " % self.name)
         for a_l in a_link:
@@ -138,6 +144,11 @@ class Resp_Handler():
         @param url:if url is not None,just put the url to the download list
         '''
         if not self._redis_enable:
+            if url:
+                task.download_task.append(url)
+            else:
+                img_link=[img.get('src') for img in self._soup.find_all('img') if img.get('src')]
+                task.download_task.extend(img_link)
             return
         download_url=self._r.hget(self.name,codes.download_url)
         if url:

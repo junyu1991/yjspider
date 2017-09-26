@@ -14,6 +14,7 @@ import redis_tool
 from handler import Resp_Handler
 import tools
 import codes
+from task import task
 
 class crawler(threading.Thread):
     '''
@@ -73,6 +74,8 @@ class crawler(threading.Thread):
             print('Connect %s timeout .\n' % (url))
             if self._redis_enable:
                 self._r.lpush(self._start,url)
+            else:
+                task.url_task.append(url)
         except requests.ConnectionError,e2:
             print('Connect %s error.\n%s' % (url,str(e2)))
         except Exception,e3:
@@ -90,7 +93,7 @@ class crawler(threading.Thread):
             url=self._r.hget(url,codes.url)
             get_url=urlparse.urljoin(self._start,self._r.lpop(url))
             while self._r.sismember(parsed_url,urlparse.urljoin(self._start,get_url)):
-                get_url=self._r.lpop(url)
+                get_url=urlparse.urljoin(self._start,self._r.lpop(url))
             #self._r.get_redis().sadd(url,get_url)
             if get_url:
                 return urlparse.urljoin(self._start,get_url)
@@ -99,6 +102,12 @@ class crawler(threading.Thread):
                 #sys.exit(-1)
                 return None
         else:
+            #Get url from memory
+            if task.url_task:
+                get_url=urlparse.urljoin(self._start,task.url_task.pop())
+                while task.parsed_url.get(get_url) or task.url_task:
+                    get_url=urlparse.urljoin(self._start,task.url_task.pop())
+                return get_url
             return None
 
 
@@ -123,7 +132,7 @@ class crawler(threading.Thread):
                 print('parsed %s ' % url)
             url=self._get_url(self._start)
             self._log.debug('get url %s from redis' % url)
-            print('get new url from redis:%s' % url)
+            print('get new url:%s' % url)
             time.sleep(3)
 
 

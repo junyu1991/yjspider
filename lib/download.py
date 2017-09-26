@@ -11,6 +11,8 @@ import tools
 import redis_tool
 import requests
 
+from task import task
+
 class Download():
     '''
     A class provide download method,use multi-threading to download file.
@@ -18,7 +20,7 @@ class Download():
     This class is used to download some file which has small file size
     '''
 
-    def __init__(self,redis_config,download_url):
+    def __init__(self,download_url,redis_config=None):
 
         #init the log ,redis
         self._log=tools.My_Log(logname=download_url,logfile='downloader')
@@ -71,6 +73,14 @@ class Download():
                 else:
                     time.sleep(10)
         else:
+            while True:
+                if task.download_task:
+                    url=urlparse.urljoin(self._redis_init_key,task.download_task.pop())
+                    if not task.downloaded_url.get(url):
+                        return url
+                else:
+                    time.sleep(10)
+
             return None
 
     def _add_downloaded(self,downloaded_url):
