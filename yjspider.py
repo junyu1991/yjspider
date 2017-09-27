@@ -9,6 +9,7 @@ from lib import redis_tool
 from lib import crawler
 from lib import handler
 from lib import codes
+from lib import download
 
 #the manage key to manage the spider
 manage_key='yjspider'
@@ -40,6 +41,9 @@ class yjspider():
         self._redis_enable=temp_redis.get_init_status()
         self._r=temp_redis.get_redis()
 
+        print self._redis_enable
+        print self._r
+
     def _init_log(self):
         pass
 
@@ -67,10 +71,14 @@ class yjspider():
         self._resp_handler=resp_handler
 
 
-    def start(self,url=''):
+    def start(self,url='',start_download=True):
         '''
         Start the spider
         '''
+
+        if not url:
+            print('Url empty ')
+            sys.exit(0)
 
         #handle the redis
         self._handle_redis(url)
@@ -84,7 +92,12 @@ class yjspider():
         if not self._crawler:
             self._crawler=crawler.crawler(redis=self._r,start_url=url)
             self._crawler.set_resp_handler(self._resp_handler)
-            self._crawler.run()
+            #self._crawler.run()
+
+        self._download=download.Download(download_url=url)
+        self._crawler.start()
+        self._download.start()
+
 
 
 

@@ -13,7 +13,7 @@ import requests
 
 from task import task
 
-class Download():
+class Download(threading.Thread):
     '''
     A class provide download method,use multi-threading to download file.
     Get task from the method who call the add_task()
@@ -21,6 +21,8 @@ class Download():
     '''
 
     def __init__(self,download_url,redis_config=None):
+
+        threading.Thread.__init__(self)
 
         #init the log ,redis
         self._log=tools.My_Log(logname=download_url,logfile='downloader')
@@ -55,6 +57,7 @@ class Download():
             #self._file_path=self._r.hget(self._redis_init_key,'download_filepath')
             self._file_path='/work/test/tempdown'
         else:
+            self._file_path=task.download_path
             pass
 
     def _get_download_task(self):
@@ -91,7 +94,7 @@ class Download():
         if self._redis_enable:
             self._r.sadd(self._downloaded_set,downloaded_url)
         else:
-            pass
+            task.downloaded_url[downloaded_url]=True
 
     def stop(self):
         '''
@@ -115,16 +118,17 @@ class Download():
         return self._pause
 
     def run(self):
-        if self._redis_enable:
-            while True:
-                if self._stop:
-                    print("Existing the download threading")
-                    break
-                if not self._pause:
-                    url=self._get_download_task()
-                    self._download(url=url,filepath=self._file_path)
-                else:
-                    continue
+        print("Start downloading")
+        while True:
+            if self._stop:
+                print("Existing the download threading")
+                break
+            if not self._pause:
+                url=self._get_download_task()
+                self._download(url=url,filepath=self._file_path)
+            else:
+                continue
+
 
     def _download(self,url='http://zt.bdinfo.net/speedtest/wo3G.rar',filepath="/work/test/tempdown"):
         '''

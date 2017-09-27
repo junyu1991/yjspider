@@ -77,9 +77,11 @@ class crawler(threading.Thread):
             else:
                 task.url_task.append(url)
         except requests.ConnectionError,e2:
-            print('Connect %s error.\n%s' % (url,str(e2)))
+            print('Connect %s error.ConnectionError %s' % (url,str(e2)))
         except Exception,e3:
-            print('Connect %s error.\n%s' % (url,str(e3)))
+            import traceback
+            traceback.print_exc()
+            print('Connect %s error.Exception %s' % (url,str(e3)))
             #self._r.sadd('parsed_'+self._start,url)
 
     def _get_url(self,url):
@@ -105,8 +107,13 @@ class crawler(threading.Thread):
             #Get url from memory
             if task.url_task:
                 get_url=urlparse.urljoin(self._start,task.url_task.pop())
-                while task.parsed_url.get(get_url) or task.url_task:
-                    get_url=urlparse.urljoin(self._start,task.url_task.pop())
+                while task.parsed_url.get(get_url):
+                    if task.url_task:
+                        get_url=urlparse.urljoin(self._start,task.url_task.pop())
+                    else:
+                        print('Url task list empty')
+                        print('Sleep 30 seconds')
+                        time.sleep(30)
                 return get_url
             return None
 
@@ -127,7 +134,6 @@ class crawler(threading.Thread):
         while True:
             print('Crawling %s ' % url)
             if url:
-                print('parsing %s ' % url)
                 self._get_response(url=url)
                 print('parsed %s ' % url)
             url=self._get_url(self._start)

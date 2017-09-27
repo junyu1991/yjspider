@@ -33,6 +33,9 @@ class Resp_Handler():
             self._redis_enable=True
         else:
             self._redis_enable=False
+            self._r=None
+        print("resp's redis ",self._r)
+        print("resp's redis enable",self._redis_enable)
 
 
     def _init_redis(self,redis_config):
@@ -129,9 +132,14 @@ class Resp_Handler():
 
 
     def handle_link(self):
+        print('Resp handle link')
         a_link=[a.get('href') for a in self._soup.find_all('a') if a.get('href')]
+        self._add_link(a_link)
+
+    def _add_link(self,a_link):
         if not self._redis_enable:
             task.url_task.extend(a_link)
+            print('Add link to memory')
             return
         self._log.debug("putting url into redis %s " % self.name)
         for a_l in a_link:

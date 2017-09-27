@@ -40,6 +40,7 @@ class redis_tool():
         except redis.RedisError,e:
             print("Redis init failed: %s" % str(e))
             self._is_init=False
+            self._r=None
 
     def get_init_status(self):
         return self._is_init
